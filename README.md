@@ -26,3 +26,11 @@ node index.js done 1234567890
 node index.js delete 1234567890
 
 ```
+
+## :file_folder: Структура проекта
+```
+project/
+├── index.js          # Главный файл с логикой CLI
+├── storage.js        # Модуль для работы с файлами (getTasks, saveTasks)
+├── tasks.json        # Файл с данными задач (создается автоматически)
+```
