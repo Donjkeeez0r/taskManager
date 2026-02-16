@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>📋 ToDoList</title>
+
+<style>
+:root {
+  --radius: 18px;
+  --bg: #f5f5f7;
+  --card: #ffffff;
+  --border: rgba(0,0,0,0.06);
+  --text: #1d1d1f;
+  --muted: #86868b;
+  --blue: #0071e3;
+  --green: #34c759;
+  --orange: #ff9500;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+}
+
+body {
+  background: var(--bg);
+  display: flex;
+  justify-content: center;
+  padding: 60px 20px;
+}
+
+.app {
+  width: 100%;
+  max-width: 760px;
+}
+
+h1 {
+  font-size: 38px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  color: var(--muted);
+  margin-bottom: 30px;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.filter-group button,
+.sort-group button {
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: none;
+  background: #e9e9ed;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.filter-group button.active,
+.sort-group button.active {
+  background: var(--blue);
+  color: white;
+}
+
+form {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 30px;
+}
+
+input {
+  flex: 1;
+  padding: 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  font-size: 15px;
+}
+
+button.primary {
+  background: var(--blue);
+  color: white;
+  border: none;
+  padding: 14px 18px;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.task {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 18px;
+  border: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: .4s cubic-bezier(.34,1.56,.64,1);
+}
+
+.task.done {
+  opacity: 0.6;
+  transform: scale(0.98);
+}
+
+.task.done .task-text {
+  text-decoration: line-through;
+}
+
+.task.in-progress {
+  border-left: 6px solid var(--orange);
+  background: #fff7ed;
+}
+
+.task.todo {
+  border-left: 6px solid transparent;
+}
+
+.task.done {
+  border-left: 6px solid var(--green);
+}
+
+.task-left {
+  flex: 1;
+}
+
+.task-text {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.task-date {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 5px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.actions button {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.edit-btn {
+  background: #e9e9ed;
+}
+
+.delete-btn {
+  background: #ffe5e5;
+}
+
+.toggle {
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  background: #ccc;
+  position: relative;
+  cursor: pointer;
+}
+
+.toggle-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: .3s;
+}
+
+.toggle.todo { background: #ccc; }
+.toggle.in-progress { background: var(--orange); }
+.toggle.done { background: var(--green); }
+
+.toggle.in-progress .toggle-circle { transform: translateX(10px); }
+.toggle.done .toggle-circle { transform: translateX(20px); }
+
+.empty {
+  text-align: center;
+  color: var(--muted);
+  margin-top: 40px;
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+<h1>📋 ToDoList</h1>
+<div class="subtitle">Минималистичный менеджер задач</div>
+
+<div class="controls">
+  <div class="filter-group">
+    <button data-filter="all" class="active">Все</button>
+    <button data-filter="active">Активные</button>
+    <button data-filter="done">Выполненные</button>
+  </div>
+
+  <div class="sort-group">
+    <button data-sort="new" class="active">Новые сверху</button>
+    <button data-sort="old">Старые сверху</button>
+  </div>
+</div>
+
+<form id="taskForm">
+  <input type="text" id="taskInput" placeholder="Новая задача..." required />
+  <button class="primary">Добавить</button>
+</form>
+
+<div class="tasks" id="tasksContainer"></div>
+
+</div>
+
+<script>
+let currentFilter = "all";
+let currentSort = "new";
+
+const container = document.getElementById("tasksContainer");
+const input = document.getElementById("taskInput");
+const form = document.getElementById("taskForm");
+
+document.querySelectorAll("[data-filter]").forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll("[data-filter]").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    currentFilter=btn.dataset.filter;
+    fetchTasks();
+  };
+});
+
+document.querySelectorAll("[data-sort]").forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll("[data-sort]").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    currentSort=btn.dataset.sort;
+    fetchTasks();
+  };
+});
+
+async function fetchTasks(){
+  const res=await fetch("/tasks");
+  let tasks=await res.json();
+
+  if(currentFilter==="active")
+    tasks=tasks.filter(t=>t.status!=="done");
+  if(currentFilter==="done")
+    tasks=tasks.filter(t=>t.status==="done");
+
+  tasks.sort((a,b)=>{
+    return currentSort==="new"
+      ? new Date(b.createdAt)-new Date(a.createdAt)
+      : new Date(a.createdAt)-new Date(b.createdAt);
+  });
+
+  tasks.sort((a,b)=>{
+    if(a.status==="done") return 1;
+    if(b.status==="done") return -1;
+    return 0;
+  });
+
+  render(tasks);
+}
+
+function render(tasks){
+  container.innerHTML="";
+  if(!tasks.length){
+    container.innerHTML='<div class="empty">Пока что задач нет 💫</div>';
+    return;
+  }
+
+  tasks.forEach(task=>{
+    const div=document.createElement("div");
+    div.className=`task ${task.status}`;
+
+    div.innerHTML=`
+      <div class="task-left">
+        <div class="task-text">${task.text}</div>
+        <div class="task-date">${new Date(task.createdAt).toLocaleString()}</div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="toggle ${task.status}"
+          onclick="changeStatus(${task.id},'${task.status}')">
+          <div class="toggle-circle"></div>
+        </div>
+
+        <div class="actions">
+          <button class="edit-btn" onclick="editTask(${task.id},'${task.text}')">✏️</button>
+          <button class="delete-btn" onclick="deleteTask(${task.id})">🗑</button>
+        </div>
+      </div>
+    `;
+
+    container.appendChild(div);
+  });
+}
+
+function editTask(id,text){
+  const newText=prompt("Редактировать задачу:",text);
+  if(!newText||!newText.trim())return;
+
+  fetch(`/tasks/${id}`,{
+    method:"PUT",
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({text:newText})
+  }).then(fetchTasks);
+}
+
+async function changeStatus(id,current){
+  const flow={todo:"in-progress","in-progress":"done",done:"todo"};
+  await fetch(`/tasks/${id}`,{
+    method:"PUT",
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({status:flow[current]})
+  });
+  fetchTasks();
+}
+
+async function deleteTask(id){
+  await fetch(`/tasks/${id}`,{method:"DELETE"});
+  fetchTasks();
+}
+
+form.onsubmit=async e=>{
+  e.preventDefault();
+  if(!input.value.trim())return;
+
+  await fetch("/tasks",{
+    method:"POST",
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({text:input.value})
+  });
+
+  input.value="";
+  fetchTasks();
+};
+
+fetchTasks();
+</script>
+
+</body>
+</html>
